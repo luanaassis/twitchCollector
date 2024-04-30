@@ -1,4 +1,6 @@
 import requests
+from classes.channel import Channel
+from classes.stream import Stream
 
 client_id = ''
 client_secret = ''
@@ -23,13 +25,33 @@ def twitchApiRequestBase(endpoint, params=None):
     response = requests.get(base_url + endpoint, headers=headers, params=params)
     return response.json()
 
-def searchGame():
-    endpoint = 'games'
-    params = {'id': 33214}
+def searchChannels(query):
+    endpoint = 'search/channels'
+    params = {'query': query}
     response = twitchApiRequestBase(endpoint, params)
-    return response['data']
+    channel_id = response['data'][0]['id']
+    return(channel_id)
 
-game = searchGame()
-game_info = game[0]
-game_name = game_info['name']
-print("Name:", game_name)
+def getChannelInfo(broadcaster_id):
+    endpoint = 'channels'
+    params = {'broadcaster_id': broadcaster_id}
+    response = twitchApiRequestBase(endpoint, params)
+    channel_info = response['data'][0]
+    newChannel = Channel(channel_info['broadcaster_id'],channel_info['broadcaster_login'],channel_info['broadcaster_name'],channel_info['broadcaster_language'],
+                         channel_info['game_name'],channel_info['game_id'],channel_info['title'],channel_info['tags'], 
+                         channel_info['content_classification_labels'], channel_info['is_branded_content'])
+    print(newChannel.channel_name,newChannel.stream_tags,newChannel.classification_labels,newChannel.is_branded_content)
+
+def getStream(id):
+    endpoint = 'channels'
+    params = {'user_id': id}
+    response = twitchApiRequestBase(endpoint, params)
+    stream_info = response['data'][0]
+    newStream = Stream(stream_info['id'],stream_info['user_id'],stream_info['user_login'],stream_info['user_name'],
+                    stream_info['language'],stream_info['game_name'], stream_info['game_id'],stream_info['title'],
+                    stream_info['tags'],stream_info['type'], stream_info['viewer_count'],stream_info['is_mature'])
+    print(newStream.game_name, newStream.stream_title, newStream.is_mature, newStream.stream_tags, newStream.viewer_count)
+
+id = searchChannels('gaules')
+getChannelInfo(id)
+getStream(id)
