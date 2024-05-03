@@ -1,5 +1,7 @@
 import requests
 import datetime
+import schedule
+import time
 from classes.channel import Channel
 from classes.stream import Stream
 from classes.game import Game
@@ -48,15 +50,16 @@ def getChannelInfo(broadcaster_id):
     print(newChannel.channel_name,newChannel.stream_tags,newChannel.classification_labels,newChannel.is_branded_content)
 
 def getStreams(id):
-    endpoint = 'channels'
+    endpoint = 'streams'
     params = {'user_id': id}
     response = twitchApiRequestBase(endpoint, params)
-    stream_info = response['data'][0]
-    newStream = Stream(stream_info['id'],stream_info['user_id'],stream_info['user_login'],stream_info['user_name'],
+    stream_info_qty = len(response['data'])
+    for i in range(stream_info_qty):
+        stream_info = response['data'][i]
+        newStream = Stream(stream_info['id'],stream_info['user_id'],stream_info['user_login'],stream_info['user_name'],
                     stream_info['language'],stream_info['game_name'], stream_info['game_id'],stream_info['title'],
                     stream_info['tags'],stream_info['type'], stream_info['viewer_count'],stream_info['is_mature'])
-    print(newStream.game_name, newStream.stream_title, newStream.is_mature, newStream.stream_tags, newStream.viewer_count)
-
+        print(newStream.game_name, newStream.stream_title, newStream.is_mature, newStream.stream_tags, newStream.viewer_count)
 
 def getTopGames():
     endpoint = 'games/top'
@@ -95,3 +98,8 @@ def getUser(id, login):
         newUser = User(user_info['id'],user_info['login'],user_info['display_name'],user_info['type'],
                        user_info['broadcaster_type'], user_info['description'],user_info['created_at'])
         print(newUser.user_name,newUser.broadcast_contract_type,newUser.channel_description,newUser.created_at)
+
+schedule.every().hour.do(getTopGames)
+while True:
+    schedule.run_pending()
+    time.sleep(3600)
