@@ -138,12 +138,12 @@ def main():
         channels = searchKidsTag()
         wb = Workbook()
         ws = wb.active
-        ws.append(['SearchTime','Channel Name', 'Stream Title', 'Is Mature', 'Stream Tags', 'Viewer Count'])
+        ws.append(['SearchTime','Channel Id','Channel Name','Language','Classification Labels' ,'Stream Title','Game ID','Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count'])
         for channel in channels:
            id = searchChannels(channel,True)
            channel_info = getChannelInfo(id)
            stream_info = getStreams(id, 'live')
-           ws.append([datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),channel_info.channel_name, stream_info.stream_title, stream_info.is_mature, ', '.join(channel_info.stream_tags), stream_info.viewer_count])
+           ws.append([datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),channel_info.id,channel_info.channel_name,channel_info.language, channel_info.classification_labels,stream_info.stream_title,stream_info.game_id,stream_info.game_name,stream_info.is_mature, ', '.join(channel_info.stream_tags), stream_info.viewer_count])
         filename = f"twitch_data_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
         wb.save(filename)
         time.sleep(3600)
