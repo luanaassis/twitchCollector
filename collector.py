@@ -1,12 +1,17 @@
 import requests
 import datetime
-import schedule
 import time
 from classes.channel import Channel
 from classes.stream import Stream
 from classes.game import Game
 from classes.category import Category
 from classes.user import User
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from openpyxl import Workbook
 
 client_id = ''
 client_secret = ''
@@ -31,13 +36,13 @@ def twitchApiRequestBase(endpoint, params=None):
     response = requests.get(base_url + endpoint, headers=headers, params=params)
     return response.json()
 
-def searchChannels(query):
+def searchChannels(query, live_only):
     endpoint = 'search/channels'
-    params = {'query': query}
+    params = {'query': query, 'live_only': live_only}
     response = twitchApiRequestBase(endpoint, params)
     channel_id = response['data'][0]['id']
     login = response['data'][0]['broadcaster_login']
-    return(channel_id,login)
+    return(channel_id)
 
 def getChannelInfo(broadcaster_id):
     endpoint = 'channels'
@@ -48,10 +53,12 @@ def getChannelInfo(broadcaster_id):
                          channel_info['game_name'],channel_info['game_id'],channel_info['title'],channel_info['tags'], 
                          channel_info['content_classification_labels'], channel_info['is_branded_content'])
     print(newChannel.channel_name,newChannel.stream_tags,newChannel.classification_labels,newChannel.is_branded_content)
+    return newChannel
 
-def getStreams(id):
+
+def getStreams(id, type):
     endpoint = 'streams'
-    params = {'user_id': id}
+    params = {'user_id': id, 'type': type}
     response = twitchApiRequestBase(endpoint, params)
     stream_info_qty = len(response['data'])
     for i in range(stream_info_qty):
@@ -60,6 +67,7 @@ def getStreams(id):
                     stream_info['language'],stream_info['game_name'], stream_info['game_id'],stream_info['title'],
                     stream_info['tags'],stream_info['type'], stream_info['viewer_count'],stream_info['is_mature'])
         print(newStream.game_name, newStream.stream_title, newStream.is_mature, newStream.stream_tags, newStream.viewer_count)
+        return newStream
 
 def getTopGames():
     endpoint = 'games/top'
@@ -99,7 +107,46 @@ def getUser(id, login):
                        user_info['broadcaster_type'], user_info['description'],user_info['created_at'])
         print(newUser.user_name,newUser.broadcast_contract_type,newUser.channel_description,newUser.created_at)
 
-schedule.every().hour.do(getTopGames)
-while True:
-    schedule.run_pending()
-    time.sleep(3600)
+def searchKidsTag():
+    chrome_driver_path = r'C:\Users\luana\Desktop\chromedriver-win64\chromedriver.exe'
+
+    service = Service(chrome_driver_path)
+    service.start()
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless') 
+    driver = webdriver.Chrome(service=service, options=options)
+
+    try:
+        url = 'https://www.twitch.tv/directory/all/tags/kids'
+        driver.get(url)
+        wait = WebDriverWait(driver, 10)
+        elements = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'a[data-focusable="true"][data-test-selector="TitleAndChannel"][data-a-target="preview-card-channel-link"]')))
+        channel_names = []
+        
+        for element in elements:
+            channel_URL = (element.get_attribute('href'))
+            channel_name = channel_URL.replace('https://www.twitch.tv/', '')
+            print("Parte relevante da URL:", channel_name)
+            channel_names.append(channel_name)
+
+    finally:
+        driver.quit()
+        return channel_names
+
+def main():
+    while True:
+        channels = searchKidsTag()
+        wb = Workbook()
+        ws = wb.active
+        ws.append(['SearchTime','Channel Name', 'Stream Title', 'Is Mature', 'Stream Tags', 'Viewer Count'])
+        for channel in channels:
+           id = searchChannels(channel,True)
+           channel_info = getChannelInfo(id)
+           stream_info = getStreams(id, 'live')
+           ws.append([datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),channel_info.channel_name, stream_info.stream_title, stream_info.is_mature, ', '.join(channel_info.stream_tags), stream_info.viewer_count])
+        filename = f"twitch_data_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+        wb.save(filename)
+        time.sleep(3600)
+
+if __name__ == "__main__":
+    main()
