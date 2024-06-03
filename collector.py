@@ -62,6 +62,7 @@ def searchChannels(query, live_only):
     if response['data']:
         channel_id = response['data'][0]['id']
         login = response['data'][0]['broadcaster_login']
+        print(channel_id,login)
         return channel_id
     else:
         raise Exception("No channels found")
@@ -95,7 +96,8 @@ def getStreams(id, type):
             print(newStream.game_name, newStream.stream_title, newStream.is_mature, newStream.stream_tags, newStream.viewer_count)
             return newStream
     else:
-        raise Exception("No streams found")
+        return (None)
+        
 
 @retry_on_exception()
 def getTopGames():
@@ -146,7 +148,7 @@ def getUser(id, login):
         raise Exception("No user found")
 
 @retry_on_exception()
-def searchKidsTag():
+def searchKidsTags():
     chrome_driver_path = r'C:\Users\luana\Desktop\chromedriver-win64\chromedriver.exe'
 
     service = Service(chrome_driver_path)
@@ -158,7 +160,9 @@ def searchKidsTag():
     urls = [
         'https://www.twitch.tv/directory/all/tags/kids',
         'https://www.twitch.tv/directory/all/tags/kid',
-        'https://www.twitch.tv/directory/all/tags/FamilyFriendly'
+        'https://www.twitch.tv/directory/all/tags/FamilyFriendly',
+        'https://www.twitch.tv/directory/all/tags/KidSafe',
+        'https://www.twitch.tv/directory/all/tags/KidFriendly'
     ]
 
     all_channel_names = []
@@ -181,18 +185,26 @@ def searchKidsTag():
     finally:
         driver.quit()
         return all_channel_names
-
-def main():
-    while True:
-        channels = searchKidsTag()
-        wb = Workbook()
-        ws = wb.active
-        ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID', 'Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Source URL'])
-        for channel, source_url in channels:
+    
+def getKidsInfluencersInfo():
+    channels = ["felipeneto", "rezendeevil", "paitambemjoga", "paitambemjogalive", "camilalouresoficial", 
+                "enaldinho", "kidplayerr", "loud_thurzin", "jeanmago", "rowdyroganfam", "zenonlives", 
+                "evantube", "piperrockelle16", "levcameron", "queenkhamyra", "charlidamelioop", "mongraal", 
+                "captainsparklez", "ldshadowlady", "grianmc", "itsfunneh", "chuggaaconroy", "blitz"]
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID', 'Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count'])
+    for channel in channels:
+        try:
+            id = searchChannels(channel, False)
+            channel_info = getChannelInfo(id)           
+            stream_info = None
             try:
-                id = searchChannels(channel, True)
-                channel_info = getChannelInfo(id)
-                stream_info = getStreams(id, 'live')
+                stream_info = getStreams(id, 'all')
+                print(stream_info)
+            except Exception as e:
+                print(f"No stream information available for channel {channel}: {e}")
+            if stream_info != None:
                 ws.append([
                     datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                     channel_info.id,
@@ -204,13 +216,61 @@ def main():
                     channel_info.last_game_name,
                     stream_info.is_mature,
                     ', '.join(stream_info.stream_tags),
-                    stream_info.viewer_count,
-                    source_url
+                    stream_info.viewer_count
                 ])
-            except Exception as e:
-                print(f"Error processing channel {channel}: {e}")
-        filename = f"twitch_data_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
-        wb.save(filename)
+            else:
+                ws.append([
+                    datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    channel_info.id,
+                    channel_info.channel_name,
+                    channel_info.language,
+                    ', '.join(channel_info.classification_labels),
+                    '',
+                    channel_info.last_game_id,
+                    channel_info.last_game_name,
+                    '',
+                    '',
+                    ''
+                ])
+        except Exception as e:
+            print(f"Error processing channel {channel}: {e}")
+    filename = f"twitch_data_influencers_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+    wb.save(filename)
+
+@retry_on_exception()
+def getKidsTagsInfo():
+    channels = searchKidsTags()
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID', 'Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Source URL'])
+    for channel, source_url in channels:
+        try:
+            id = searchChannels(channel, True)
+            channel_info = getChannelInfo(id)
+            stream_info = getStreams(id, 'live')
+            ws.append([
+                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                channel_info.id,
+                channel_info.channel_name,
+                channel_info.language,
+                ', '.join(channel_info.classification_labels),
+                stream_info.stream_title,
+                channel_info.last_game_id,
+                channel_info.last_game_name,
+                stream_info.is_mature,
+                ', '.join(stream_info.stream_tags),
+                stream_info.viewer_count,
+                source_url
+            ])
+        except Exception as e:
+            print(f"Error processing channel {channel}: {e}")
+    filename = f"twitch_data_tags_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+    wb.save(filename)  
+
+def main():
+    while True:
+        getKidsInfluencersInfo()
+        getKidsTagsInfo()
         time.sleep(3600)
 
 if __name__ == "__main__":
