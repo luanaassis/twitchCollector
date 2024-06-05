@@ -97,7 +97,34 @@ def getStreams(id, type):
             return newStream
     else:
         return (None)
-        
+
+def getStreamsByGameId(game, qty):
+    endpoint = 'streams'
+    params = {'game_id': game, 'first': qty}
+    response = twitchApiRequestBase(endpoint, params)
+    streams = []
+    
+    if response['data']:
+        for stream_info in response['data']:
+            newStream = Stream(
+                stream_info['id'], 
+                stream_info['user_id'], 
+                stream_info['user_login'], 
+                stream_info['user_name'],
+                stream_info['language'], 
+                stream_info['game_name'], 
+                stream_info['game_id'], 
+                stream_info['title'],
+                stream_info['tags'], 
+                stream_info['type'], 
+                stream_info['viewer_count'], 
+                stream_info['is_mature']
+            )
+            streams.append(newStream)
+            print(newStream.game_name, newStream.stream_title, newStream.is_mature, newStream.stream_tags, newStream.viewer_count)
+        return streams
+    else:
+        return None     
 
 @retry_on_exception()
 def getTopGames():
@@ -111,14 +138,27 @@ def getTopGames():
         raise Exception("No top games found")
 
 @retry_on_exception()
-def getGame(id):
+def getGamebyID(id):
     endpoint = 'games'
     params = {'id': id}
     response = twitchApiRequestBase(endpoint, params)
     if response['data']:
         game_info = response['data'][0]
         newGame = Game(game_info['id'], game_info['name'], game_info['igdb_id'], False, None)
-        print(newGame.name, newGame.isTopGame, newGame.dateTop)
+        print(newGame.name, newGame.igdbid, newGame.isTopGame, newGame.dateTop)
+        return newGame
+    else:
+        return None
+    
+def getGamebyName(name):
+    endpoint = 'games'
+    params = {'name': name}
+    response = twitchApiRequestBase(endpoint, params)
+    if response['data']:
+        game_info = response['data'][0]
+        newGame = Game(game_info['id'], game_info['name'], game_info['igdb_id'], False, None)
+        print(newGame.name, newGame.igdbid, newGame.isTopGame, newGame.dateTop)
+        return newGame
     else:
         raise Exception("No game found")
 
@@ -162,7 +202,19 @@ def searchKidsTags():
         'https://www.twitch.tv/directory/all/tags/kid',
         'https://www.twitch.tv/directory/all/tags/FamilyFriendly',
         'https://www.twitch.tv/directory/all/tags/KidSafe',
-        'https://www.twitch.tv/directory/all/tags/KidFriendly'
+        'https://www.twitch.tv/directory/all/tags/KidFriendly',
+        'https://www.twitch.tv/directory/all/tags/KidGamer',
+        'https://www.twitch.tv/directory/all/tags/childrens',
+        'https://www.twitch.tv/directory/all/tags/KidsGaming',
+        'https://www.twitch.tv/directory/all/tags/Kidstreaming',
+        'https://www.twitch.tv/directory/all/tags/childfriendlystream',
+        'https://www.twitch.tv/directory/all/tags/kidsandparentsgamers',
+        'https://www.twitch.tv/directory/all/tags/kidshow',
+        'https://www.twitch.tv/directory/all/tags/Friendly',
+        'https://www.twitch.tv/directory/all/tags/Family',
+        'https://www.twitch.tv/directory/all/tags/Kidsfriendly',
+        'https://www.twitch.tv/directory/all/tags/KIDSTREAMER',
+        'https://www.twitch.tv/directory/all/tags/kidstream'
     ]
 
     all_channel_names = []
@@ -187,7 +239,7 @@ def searchKidsTags():
         return all_channel_names
     
 def getKidsInfluencersInfo():
-    channels = ["felipeneto", "rezendeevil", "paitambemjoga", "paitambemjogalive", "camilalouresoficial", 
+    channels = ["gaules","felipeneto", "rezendeevil", "paitambemjoga", "paitambemjogalive", "camilalouresoficial", 
                 "enaldinho", "kidplayerr", "loud_thurzin", "jeanmago", "rowdyroganfam", "zenonlives", 
                 "evantube", "piperrockelle16", "levcameron", "queenkhamyra", "charlidamelioop", "mongraal", 
                 "captainsparklez", "ldshadowlady", "grianmc", "itsfunneh", "chuggaaconroy", "blitz"]
@@ -242,12 +294,13 @@ def getKidsTagsInfo():
     channels = searchKidsTags()
     wb = Workbook()
     ws = wb.active
-    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID', 'Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Source URL'])
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID','IGDB ID','Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Source URL'])
     for channel, source_url in channels:
         try:
             id = searchChannels(channel, True)
             channel_info = getChannelInfo(id)
             stream_info = getStreams(id, 'live')
+            game_info = getGamebyID(stream_info.game_id)
             ws.append([
                 datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 channel_info.id,
@@ -255,8 +308,9 @@ def getKidsTagsInfo():
                 channel_info.language,
                 ', '.join(channel_info.classification_labels),
                 stream_info.stream_title,
-                channel_info.last_game_id,
-                channel_info.last_game_name,
+                stream_info.game_id,
+                game_info.igdbid if game_info else '',
+                stream_info.game_name,
                 stream_info.is_mature,
                 ', '.join(stream_info.stream_tags),
                 stream_info.viewer_count,
@@ -267,8 +321,43 @@ def getKidsTagsInfo():
     filename = f"twitch_data_tags_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     wb.save(filename)  
 
+def getStreamsByGame():
+    games = ['GTA5','minecraft']
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID','IGDB ID','Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count'])
+    
+    for game in games:
+        try:
+            game_info = getGamebyName(game)
+            stream_info_list = getStreamsByGameId(game_info.id, 100)
+            if stream_info_list:
+                for stream in stream_info_list:
+                    channel_info = getChannelInfo(stream.user_id)
+                    ws.append([
+                        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        stream.user_id,
+                        stream.user_name, 
+                        stream.language,
+                        ', '.join(channel_info.classification_labels),
+                        stream.stream_title,
+                        stream.game_id,
+                        game_info.igdbid, 
+                        stream.game_name,
+                        stream.is_mature,
+                        ', '.join(stream.stream_tags),
+                        stream.viewer_count
+                    ])
+        
+        except Exception as e:
+            print(f"Error processing game {game}: {e}")
+    
+    filename = f"twitch_data_game_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+    wb.save(filename)
+
 def main():
     while True:
+        getStreamsByGame()
         getKidsInfluencersInfo()
         getKidsTagsInfo()
         time.sleep(3600)
