@@ -6,6 +6,7 @@ from classes.stream import Stream
 from classes.game import Game
 from classes.category import Category
 from classes.user import User
+from classes.video import Video
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -124,7 +125,33 @@ def getStreamsByGameId(game, qty):
             print(newStream.game_name, newStream.stream_title, newStream.is_mature, newStream.stream_tags, newStream.viewer_count)
         return streams
     else:
-        return None     
+        return None
+
+def getVideos(user_id,period,sort):
+    endpoint = 'videos'
+    params = {'user_id': user_id, 'period': period,'sort': sort}
+    response = twitchApiRequestBase(endpoint, params)
+    videos = []
+    if response['data']:
+        for video_info in response['data']:
+            newVideo = Video(
+                video_info['id'],
+                video_info['stream_id'],
+                video_info['user_id'],
+                video_info['user_login'],
+                video_info['user_name'],
+                video_info['title'],
+                video_info['description'],
+                video_info['published_at'],
+                video_info['view_count'],
+                video_info['language'],
+                video_info['type']
+            )
+            videos.append(newVideo)
+            print(newVideo.video_title, newVideo.stream_id,newVideo.user_name, newVideo.published_at)
+        return videos
+    else:
+        return None
 
 @retry_on_exception()
 def getTopGames():
@@ -245,7 +272,7 @@ def getKidsInfluencersInfo():
                 "captainsparklez", "ldshadowlady", "grianmc", "itsfunneh", "chuggaaconroy", "blitz"]
     wb = Workbook()
     ws = wb.active
-    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID', 'Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count'])
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream/Video Title', 'Game ID', 'Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Video Published At', 'Type'])
     for channel in channels:
         try:
             id = searchChannels(channel, False)
@@ -253,6 +280,7 @@ def getKidsInfluencersInfo():
             stream_info = None
             try:
                 stream_info = getStreams(id, 'all')
+                video_info = getVideos(id,'all','time')
                 print(stream_info)
             except Exception as e:
                 print(f"No stream information available for channel {channel}: {e}")
@@ -270,6 +298,23 @@ def getKidsInfluencersInfo():
                     ', '.join(stream_info.stream_tags),
                     stream_info.viewer_count
                 ])
+            elif video_info != None:
+                for video in video_info:
+                    ws.append([
+                        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        channel_info.id,
+                        channel_info.channel_name,
+                        channel_info.language,
+                        ', '.join(channel_info.classification_labels),
+                        video.video_title,
+                        channel_info.last_game_id,
+                        channel_info.last_game_name,
+                        '',
+                        '',
+                        video.view_count,
+                        video.published_at,
+                        video.type
+                    ])
             else:
                 ws.append([
                     datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -330,7 +375,7 @@ def getStreamsByGame():
     for game in games:
         try:
             game_info = getGamebyName(game)
-            stream_info_list = getStreamsByGameId(game_info.id, 100)
+            stream_info_list = getStreamsByGameId(game_info.id, 20)
             if stream_info_list:
                 for stream in stream_info_list:
                     channel_info = getChannelInfo(stream.user_id)
@@ -357,9 +402,9 @@ def getStreamsByGame():
 
 def main():
     while True:
-        getStreamsByGame()
         getKidsInfluencersInfo()
         getKidsTagsInfo()
+        getStreamsByGame()
         time.sleep(3600)
 
 if __name__ == "__main__":
