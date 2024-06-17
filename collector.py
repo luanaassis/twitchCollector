@@ -18,6 +18,49 @@ client_id = ''
 client_secret = ''
 
 
+rating_systems = {1: 'ESRB', 2: 'PEGI', 3: 'CERO', 4: 'USK', 5: 'GRAC', 6: 'CLASS_IND', 7: 'ACB'}
+rating_codes = {
+    1: "Three",
+    2: "Seven",
+    3: "Twelve",
+    4: "Sixteen",
+    5: "Eighteen",
+    6: "RP",
+    7: "EC",
+    8: "E",
+    9: "E10",
+    10: "T",
+    11: "M",
+    12: "AO",
+    13: "CERO_A",
+    14: "CERO_B",
+    15: "CERO_C",
+    16: "CERO_D",
+    17: "CERO_Z",
+    18: "USK_0",
+    19: "USK_6",
+    20: "USK_12",
+    21: "USK_16",
+    22: "USK_18",
+    23: "GRAC_ALL",
+    24: "GRAC_Twelve",
+    25: "GRAC_Fifteen",
+    26: "GRAC_Eighteen",
+    27: "GRAC_TESTING",
+    28: "CLASS_IND_L",
+    29: "CLASS_IND_Ten",
+    30: "CLASS_IND_Twelve",
+    31: "CLASS_IND_Fourteen",
+    32: "CLASS_IND_Sixteen",
+    33: "CLASS_IND_Eighteen",
+    34: "ACB_G",
+    35: "ACB_PG",
+    36: "ACB_M",
+    37: "ACB_MA15",
+    38: "ACB_R18",
+    39: "ACB_RC"
+}
+
 def retry_on_exception(max_retries=3, delay=5):
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -44,6 +87,7 @@ def get_access_token(client_id, client_secret):
     response = requests.post(url, params=params)
     data = response.json()
     return data.get('access_token')
+
 
 @retry_on_exception()
 def twitchApiRequestBase(endpoint, params=None):
@@ -272,7 +316,8 @@ def getKidsInfluencersInfo():
                 "captainsparklez", "ldshadowlady", "grianmc", "itsfunneh", "chuggaaconroy", "blitz"]
     wb = Workbook()
     ws = wb.active
-    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream/Video Title', 'Game ID', 'Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Video Published At', 'Type'])
+    ageRatingList = []
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream/Video Title', 'Game ID', 'Game Name', 'Sistema', 'Classificação' ,'Is Mature', 'Stream Tags', 'Viewer Count', 'Video Published At', 'Type'])
     for channel in channels:
         try:
             id = searchChannels(channel, False)
@@ -281,7 +326,10 @@ def getKidsInfluencersInfo():
             try:
                 stream_info = getStreams(id, 'all')
                 video_info = getVideos(id,'all','time')
-                print(stream_info)
+                age_info = getGameDetails(channel_info.last_game_id)
+                for age in age_info:
+                    ageRatingReturn = getAgeRating(age)
+                    ageValues = substitute_values(ageRatingReturn)
             except Exception as e:
                 print(f"No stream information available for channel {channel}: {e}")
             if stream_info != None:
@@ -294,6 +342,8 @@ def getKidsInfluencersInfo():
                     stream_info.stream_title,
                     channel_info.last_game_id,
                     channel_info.last_game_name,
+                    ageValues.category,
+                    ageValues.rating,
                     stream_info.is_mature,
                     ', '.join(stream_info.stream_tags),
                     stream_info.viewer_count
@@ -309,6 +359,8 @@ def getKidsInfluencersInfo():
                         video.video_title,
                         channel_info.last_game_id,
                         channel_info.last_game_name,
+                        ageValues.category,
+                        ageValues.rating,
                         '',
                         '',
                         video.view_count,
@@ -325,6 +377,8 @@ def getKidsInfluencersInfo():
                     '',
                     channel_info.last_game_id,
                     channel_info.last_game_name,
+                    ageValues.category,
+                    ageValues.rating,
                     '',
                     '',
                     ''
@@ -400,11 +454,45 @@ def getStreamsByGame():
     filename = f"twitch_data_game_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     wb.save(filename)
 
+@retry_on_exception()
+def igdbApiRequestBase(endpoint, params=None):
+    base_url = 'https://api.igdb.com/v4'
+    headers = {
+        'Client-ID': client_id,
+        'Authorization': f'Bearer {get_access_token(client_id, client_secret)}'
+    }
+    response = requests.get(base_url + endpoint, headers=headers, params=params)
+    return response.json()
+
+def getGameDetails(game_id):
+    endpoint = f'/games/{game_id}'
+    params = {
+        'fields': 'age_ratings',
+    }
+    response = igdbApiRequestBase(endpoint, params=params)
+    return response[0]['age_ratings']
+
+def getAgeRating(idAgeRating):
+    endpoint = f'/age_ratings/{idAgeRating}'
+    params = {
+        'fields': 'category,content_descriptions,rating',
+    }
+    response = igdbApiRequestBase(endpoint, params=params)
+    return response
+
+def substitute_values(data):
+    for item in data:
+        if 'category' in item and category == 6:
+            category = rating_systems.get(item['category'], item['category'])  
+        if 'rating' in item:
+            rating = rating_codes.get(item['rating'], item['rating'])  
+    return category,rating
+
 def main():
     while True:
-        getKidsInfluencersInfo()
-        getKidsTagsInfo()
-        getStreamsByGame()
+        #getKidsInfluencersInfo()
+        #getKidsTagsInfo()
+        #getStreamsByGame()
         time.sleep(3600)
 
 if __name__ == "__main__":
