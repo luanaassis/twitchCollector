@@ -310,14 +310,13 @@ def searchKidsTags():
         return all_channel_names
     
 def getKidsInfluencersInfo():
-    channels = ["gaules","felipeneto", "rezendeevil", "paitambemjoga", "paitambemjogalive", "camilalouresoficial", 
+    channels = ["felipeneto", "rezendeevil", "paitambemjoga", "paitambemjogalive", "camilalouresoficial", 
                 "enaldinho", "kidplayerr", "loud_thurzin", "jeanmago", "rowdyroganfam", "zenonlives", 
                 "evantube", "piperrockelle16", "levcameron", "queenkhamyra", "charlidamelioop", "mongraal", 
                 "captainsparklez", "ldshadowlady", "grianmc", "itsfunneh", "chuggaaconroy", "blitz"]
     wb = Workbook()
     ws = wb.active
-    ageRatingList = []
-    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream/Video Title', 'Game ID', 'Game Name', 'Sistema', 'Classificação' ,'Is Mature', 'Stream Tags', 'Viewer Count', 'Video Published At', 'Type'])
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream/Video Title', 'Game ID', 'Game Name', 'Age Rating' ,'Is Mature', 'Stream Tags', 'Viewer Count', 'Video Published At', 'Type'])
     for channel in channels:
         try:
             id = searchChannels(channel, False)
@@ -326,10 +325,8 @@ def getKidsInfluencersInfo():
             try:
                 stream_info = getStreams(id, 'all')
                 video_info = getVideos(id,'all','time')
-                age_info = getGameDetails(channel_info.last_game_id)
-                for age in age_info:
-                    ageRatingReturn = getAgeRating(age)
-                    ageValues = substitute_values(ageRatingReturn)
+                game_info = getGamebyID(channel_info.last_game_id)
+                age_info = ageManipulation(game_info.igdbid)
             except Exception as e:
                 print(f"No stream information available for channel {channel}: {e}")
             if stream_info != None:
@@ -342,8 +339,7 @@ def getKidsInfluencersInfo():
                     stream_info.stream_title,
                     channel_info.last_game_id,
                     channel_info.last_game_name,
-                    ageValues.category,
-                    ageValues.rating,
+                    age_info if game_info else '',
                     stream_info.is_mature,
                     ', '.join(stream_info.stream_tags),
                     stream_info.viewer_count
@@ -359,8 +355,7 @@ def getKidsInfluencersInfo():
                         video.video_title,
                         channel_info.last_game_id,
                         channel_info.last_game_name,
-                        ageValues.category,
-                        ageValues.rating,
+                        age_info if game_info else '',
                         '',
                         '',
                         video.view_count,
@@ -377,8 +372,7 @@ def getKidsInfluencersInfo():
                     '',
                     channel_info.last_game_id,
                     channel_info.last_game_name,
-                    ageValues.category,
-                    ageValues.rating,
+                    age_info if game_info else '',
                     '',
                     '',
                     ''
@@ -393,13 +387,14 @@ def getKidsTagsInfo():
     channels = searchKidsTags()
     wb = Workbook()
     ws = wb.active
-    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID','IGDB ID','Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Source URL'])
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID','IGDB ID','Game Name','Age Rating', 'Is Mature', 'Stream Tags', 'Viewer Count', 'Source URL'])
     for channel, source_url in channels:
         try:
             id = searchChannels(channel, True)
             channel_info = getChannelInfo(id)
             stream_info = getStreams(id, 'live')
             game_info = getGamebyID(stream_info.game_id)
+            age_info = ageManipulation(game_info.igdbid)
             ws.append([
                 datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 channel_info.id,
@@ -410,6 +405,7 @@ def getKidsTagsInfo():
                 stream_info.game_id,
                 game_info.igdbid if game_info else '',
                 stream_info.game_name,
+                age_info if game_info else '',
                 stream_info.is_mature,
                 ', '.join(stream_info.stream_tags),
                 stream_info.viewer_count,
@@ -424,12 +420,13 @@ def getStreamsByGame():
     games = ['GTA5','minecraft']
     wb = Workbook()
     ws = wb.active
-    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID','IGDB ID','Game Name', 'Is Mature', 'Stream Tags', 'Viewer Count'])
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream Title', 'Game ID','IGDB ID','Game Name','Age Rating', 'Is Mature', 'Stream Tags', 'Viewer Count'])
     
     for game in games:
         try:
             game_info = getGamebyName(game)
             stream_info_list = getStreamsByGameId(game_info.id, 20)
+            age_info = ageManipulation(game_info.igdbid)
             if stream_info_list:
                 for stream in stream_info_list:
                     channel_info = getChannelInfo(stream.user_id)
@@ -443,6 +440,7 @@ def getStreamsByGame():
                         stream.game_id,
                         game_info.igdbid, 
                         stream.game_name,
+                        age_info,
                         stream.is_mature,
                         ', '.join(stream.stream_tags),
                         stream.viewer_count
@@ -482,17 +480,26 @@ def getAgeRating(idAgeRating):
 
 def substitute_values(data):
     for item in data:
-        if 'category' in item and category == 6:
+        if 'category' in item:
             category = rating_systems.get(item['category'], item['category'])  
         if 'rating' in item:
-            rating = rating_codes.get(item['rating'], item['rating'])  
-    return category,rating
+            rating = rating_codes.get(item['rating'], item['rating'])
+        age = category,rating
+    return age
+
+def ageManipulation(igdb_id):
+    ageFinal = []
+    age_info = getGameDetails(igdb_id)
+    for age in age_info:
+        ageRatingReturn = getAgeRating(age)
+        ageFinal.append(substitute_values(ageRatingReturn))
+    return str(ageFinal)
 
 def main():
     while True:
-        #getKidsInfluencersInfo()
-        #getKidsTagsInfo()
-        #getStreamsByGame()
+        getKidsInfluencersInfo()
+        getKidsTagsInfo()
+        getStreamsByGame()
         time.sleep(3600)
 
 if __name__ == "__main__":
