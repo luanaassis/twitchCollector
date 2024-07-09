@@ -452,6 +452,85 @@ def getStreamsByGame():
     filename = f"twitch_data_game_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     wb.save(filename)
 
+def verifyStreamersFromGames():
+    dataframes = []
+    actualDate = datetime.datetime.now().strftime('%Y-%m-%d')
+    folder = 'C:\\Users\\Aluno\\Desktop\\twitchCollector-main\\twitchCollector-main'
+    files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and f.startswith('twitch_data_game_')]
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['SearchTime', 'Channel Id', 'Channel Name', 'Language', 'Classification Labels', 'Stream/Video Title', 'Game ID', 'Game Name', 'Age Rating' ,'Is Mature', 'Stream Tags', 'Viewer Count', 'Video Published At', 'Type'])
+    for i in files:
+        parts = i.split('_')
+        date_part = parts[3]
+        if date_part <= actualDate:
+            print(i)
+            df = pd.read_excel(i, engine='openpyxl')
+            dataframes.append(df)
+    df_final = pd.concat(dataframes, ignore_index=True)
+    channels = df_final['Channel Id']
+    for i in channels:
+        channel_info = getChannelInfo(id)
+        print(channel_info.channel_name)           
+        stream_info = None
+        try:
+            stream_info = getStreams(id, 'all')
+            video_info = getVideos(id,'all','time')
+            game_info = getGamebyID(channel_info.last_game_id)
+            age_info = ageManipulation(game_info.igdbid)
+        except Exception as e:
+            print(f"No stream information available for channel")
+        if stream_info != None:
+            ws.append([
+                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                channel_info.id,
+                channel_info.channel_name,
+                channel_info.language,
+                ', '.join(channel_info.classification_labels),
+                stream_info.stream_title,
+                channel_info.last_game_id,
+                channel_info.last_game_name,
+                age_info if game_info else '',
+                stream_info.is_mature,
+                ', '.join(stream_info.stream_tags),
+                stream_info.viewer_count
+            ])
+        elif video_info != None:
+            for video in video_info:
+                ws.append([
+                    datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    channel_info.id,
+                    channel_info.channel_name,
+                    channel_info.language,
+                    ', '.join(channel_info.classification_labels),
+                    video.video_title,
+                    channel_info.last_game_id,
+                    channel_info.last_game_name,
+                    age_info if game_info else '',
+                    '',
+                    '',
+                    video.view_count,
+                    video.published_at,
+                    video.type
+                ])
+        else:
+            ws.append([
+                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                channel_info.id,
+                channel_info.channel_name,
+                channel_info.language,
+                ', '.join(channel_info.classification_labels),
+                '',
+                channel_info.last_game_id,
+                channel_info.last_game_name,
+                age_info if game_info else '',
+                '',
+                '',
+                ''
+            ])
+    filename = f"twitch_data_streamers_game_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+    wb.save(filename)
+
 @retry_on_exception()
 def igdbApiRequestBase(endpoint, params=None):
     base_url = 'https://api.igdb.com/v4'
