@@ -455,7 +455,7 @@ def getStreamsByGame():
 def verifyStreamersFromGames():
     dataframes = []
     actualDate = datetime.datetime.now().strftime('%Y-%m-%d')
-    folder = 'C:\\Users\\Aluno\\Desktop\\twitchCollector-main\\twitchCollector-main'
+    folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\gameTest'
     files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and f.startswith('twitch_data_game_')]
     wb = Workbook()
     ws = wb.active
@@ -465,17 +465,17 @@ def verifyStreamersFromGames():
         date_part = parts[3]
         if date_part <= actualDate:
             print(i)
-            df = pd.read_excel(i, engine='openpyxl')
+            file_path = os.path.join(folder, i)
+            df = pd.read_excel(file_path, engine='openpyxl')
             dataframes.append(df)
     df_final = pd.concat(dataframes, ignore_index=True)
     channels = df_final['Channel Id']
-    for i in channels:
-        channel_info = getChannelInfo(id)
+    for c in channels:
+        channel_info = getChannelInfo(c)
         print(channel_info.channel_name)           
         stream_info = None
         try:
-            stream_info = getStreams(id, 'all')
-            video_info = getVideos(id,'all','time')
+            stream_info = getStreams(c, 'all')
             game_info = getGamebyID(channel_info.last_game_id)
             age_info = ageManipulation(game_info.igdbid)
         except Exception as e:
@@ -495,24 +495,6 @@ def verifyStreamersFromGames():
                 ', '.join(stream_info.stream_tags),
                 stream_info.viewer_count
             ])
-        elif video_info != None:
-            for video in video_info:
-                ws.append([
-                    datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    channel_info.id,
-                    channel_info.channel_name,
-                    channel_info.language,
-                    ', '.join(channel_info.classification_labels),
-                    video.video_title,
-                    channel_info.last_game_id,
-                    channel_info.last_game_name,
-                    age_info if game_info else '',
-                    '',
-                    '',
-                    video.view_count,
-                    video.published_at,
-                    video.type
-                ])
         else:
             ws.append([
                 datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
