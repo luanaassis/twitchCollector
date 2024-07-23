@@ -262,7 +262,7 @@ def getUser(id, login):
 
 @retry_on_exception()
 def searchKidsTags():
-    chrome_driver_path = r'C:\Users\luana\Desktop\chromedriver-win64\chromedriver.exe'
+    chrome_driver_path = r'~/Área de trabalho/chromedriver-linux64\chromedriver'
 
     service = Service(chrome_driver_path)
     service.start()
