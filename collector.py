@@ -1,6 +1,8 @@
 import requests
 import datetime
 import time
+import pandas as pd
+import os
 from classes.channel import Channel
 from classes.stream import Stream
 from classes.game import Game
@@ -495,11 +497,76 @@ def ageManipulation(igdb_id):
         ageFinal.append(substitute_values(ageRatingReturn))
     return str(ageFinal)
 
+def verifyStreamersFromGames():
+    dataframes = []
+    actualDate = datetime.datetime.now().strftime('%Y-%m-%d')
+    folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\gameTest'
+    files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and f.startswith('twitch_data_game_')]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.append([
+        'SearchTime','Root Date', 'Root Game', 'Channel Id', 'Channel Name', 'Language',
+        'Classification Labels', 'Stream/Video Title', 'Game ID', 'Game Name',
+        'Age Rating', 'Is Mature', 'Stream Tags', 'Viewer Count'
+    ])
+
+    for i in files:
+        parts = i.split('_')
+        date_part = parts[3]
+        if date_part < actualDate:
+            print(i)
+            file_path = os.path.join(folder, i)
+            df = pd.read_excel(file_path, engine='openpyxl')
+            dataframes.append(df)
+
+    if not dataframes:
+        print("No dataframes to process")
+        return
+
+    df_final = pd.concat(dataframes, ignore_index=True)
+
+    for _, row in df_final.iterrows():
+        channels = row['Channel Id']
+        rootDate = row['SearchTime']
+        rootGame = row['Game Name']
+        channel_info = getChannelInfo(channels)
+        stream_info = None
+        age_info = None
+        game_info = None
+        
+        try:
+            stream_info = getStreams(channels, 'all')
+            game_info = getGamebyID(channel_info.last_game_id)
+            age_info = ageManipulation(game_info.igdbid)
+        except Exception as e:
+            print(f"No stream information available for channel: {e}")
+
+        ws.append([
+            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            rootDate,
+            rootGame,
+            channel_info.id,
+            channel_info.channel_name,
+            channel_info.language,
+            ', '.join(channel_info.classification_labels),
+            stream_info.stream_title if stream_info else '',
+            channel_info.last_game_id,
+            channel_info.last_game_name,
+            age_info if game_info else '',
+            stream_info.is_mature if stream_info else '',
+            ', '.join(stream_info.stream_tags) if stream_info else '',
+            stream_info.viewer_count if stream_info else ''
+        ])
+
+    filename = f"twitch_data_streamers_game_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
+    wb.save(filename)
 def main():
     while True:
         getKidsInfluencersInfo()
         getKidsTagsInfo()
         getStreamsByGame()
+        #verifyStreamersFromGames()
         time.sleep(3600)
 
 if __name__ == "__main__":
