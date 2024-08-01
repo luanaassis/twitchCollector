@@ -21,12 +21,6 @@ most_played_games = df_final['Game Name'].value_counts()
 top_viewers = df.nlargest(10, 'Viewer Count')
 count_eighteen = df_final['Age Rating'].str.contains(pattern, case=False, na=False).sum()
 
-print(count_mature_channels)
-print(count_mature_games)
-print(most_played_games)
-print(top_viewers)
-print(count_eighteen)
-
 output_file = f'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\output_tag_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt'
 
 with open(output_file, 'w', encoding='utf-8') as f:
