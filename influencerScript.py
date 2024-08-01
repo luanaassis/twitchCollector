@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import datetime
 
 folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev'
 files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and f.startswith('twitch_data_influencers')]
@@ -51,3 +52,19 @@ df_final['isAdult'] = df_final['Channel Name'].map(isAdult) #adicionando informa
 inappropriate_contents = df_final[df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False)] #conteúdos +18
 count_adult_inappropriate = inappropriate_contents[inappropriate_contents['isAdult'] == 1].shape[0] #conteúdos +18 de canais adultos
 count_non_adult_inappropriate = inappropriate_contents[inappropriate_contents['isAdult'] == 0].shape[0] #conteúdos +18 de canais -18
+
+output_file = f'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\output_influencers_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt'
+
+with open(output_file, 'w', encoding='utf-8') as f:
+    f.write('Top Viewers:\n')
+    f.write(top_viewers.to_string())
+    f.write('\n')
+    f.write(f'Count of Inappropriate Games: {count_inapropriateGame}\n')
+    f.write(f'Count of Mature Games: {count_mature_games}\n')
+    f.write(f'Count of Mature Channels: {count_mature_channels}\n')
+    f.write('Inappropriate Top Viewers:\n')
+    f.write(inappropriate_top_viewers.to_string())
+    f.write('\n')
+    f.write(f'Count of Inappropriate Top Viewers: {count_inappropriate_top_viewers}\n')
+    f.write(f'Count of Adult Inappropriate Contents: {count_adult_inappropriate}\n')
+    f.write(f'Count of Non-Adult Inappropriate Contents: {count_non_adult_inappropriate}\n')
