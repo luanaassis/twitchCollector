@@ -40,10 +40,15 @@ for file in files:
     df = pd.read_excel(file_path, engine='openpyxl')
     dataframes.append(df)
 
-df_final = pd.concat(dataframes, ignore_index=True)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_colwidth', None)
+pd.set_option('display.expand_frame_repr', False)
+df_mid = pd.concat(dataframes, ignore_index=True)
+df_final = df.drop_duplicates(subset=['Channel Id', 'Stream/Video Title', 'Game ID'], keep='last')
 
 top_viewers = df.nlargest(10, 'Viewer Count') # mais vistos
-count_inapropriateGame = df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False).sum() # quantidade de conteúdos 18+
+count_inapropriateGame = df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False).sum()
 count_mature_games = df_final['Is Mature'].sum() # quantidade de jogos classificados com 18+
 count_mature_channels = df_final['Classification Labels'].notnull().sum() # quantidade de canais classificados com 18+
 inappropriate_top_viewers = top_viewers[top_viewers['Age Rating'].str.contains(patternInapropriate, case=False, na=False)] #mais vistos classificados com 18+
