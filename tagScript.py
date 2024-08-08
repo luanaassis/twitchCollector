@@ -27,9 +27,9 @@ count_mature_channels_by_tag = df_final[df_final['Classification Labels'].notnul
 count_mature_games_by_tag = df_final.groupby('Source URL')['Is Mature'].sum()
 most_played_games_by_tag = df_final.groupby('Source URL')['Game Name'].value_counts()
 most_played_games_by_tag = most_played_games_by_tag.reset_index(name='Count')
-result_most_played_games_by_tag = pd.merge(most_played_games_by_tag, df_final[['Source URL', 'Game Name', 'Age Rating']], on=['Source URL', 'Game Name'], how='left')
+result_most_played_games_by_tag = pd.merge(most_played_games_by_tag, df_final[['Source URL','Stream Title', 'Game Name', 'Age Rating']], on=['Source URL', 'Game Name'], how='left')
 top_viewers_by_tag = df_final.groupby('Source URL').apply(lambda x: x.nlargest(20, 'Viewer Count')).reset_index(drop=True)
-colunas_desejadas = ['Source URL', 'Game Name', 'Viewer Count', 'Age Rating','Channel Name']
+colunas_desejadas = ['Source URL', 'Game Name', 'Viewer Count', 'Age Rating','Channel Name', 'Stream Title']
 top_viewers_by_tag = top_viewers_by_tag[colunas_desejadas]
 top_viewers_by_tag['Age Rating Flag'] = top_viewers_by_tag['Age Rating'].str.contains(pattern).astype(int)
 count_eighteen_by_tag = df_final[df_final['Age Rating'].str.contains(pattern, case=False, na=False)].groupby('Source URL').size()
@@ -49,7 +49,7 @@ with open(output_file, 'w', encoding='utf-8') as f:
     for tag, count in count_eighteen_by_tag.items():
         proportion = (count / unique_games) * 100
         f.write(f"Tag: {tag}, Count: {count}, Total:{unique_games}, Proportion: {proportion:.2f}%\n")
-    f.write('Quais os jogos mais jogados com as tags relacionadas ao p ́ublico infantil? \n')
+    f.write('Quais os jogos mais jogados com as tags relacionadas ao publico infantil? \n')
     f.write(f"{result_most_played_games_by_tag}\n")
     f.write('Os conteudos mais visualizados sao de conteUdos apropriados ao publico infantil?:\n')
     f.write(f"\n{top_viewers_by_tag}\n")
