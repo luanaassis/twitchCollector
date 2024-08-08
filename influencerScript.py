@@ -47,8 +47,21 @@ pd.set_option('display.expand_frame_repr', False)
 df_mid = pd.concat(dataframes, ignore_index=True)
 df_final = df.drop_duplicates(subset=['Channel Id', 'Stream/Video Title', 'Game ID'], keep='last')
 
-top_viewers = df.nlargest(10, 'Viewer Count') # mais vistos
+#Metrics
+unique_channels = df_final['Channel Id'].nunique()
+unique_games = df_final['Game Name'].nunique()
+unique_videos_lives = df_final['Stream/Video Title'].nunique()
+
+
+top_viewers_by_influencer = df_final.groupby('Channel Name').apply(lambda x: x.nlargest(5, 'Viewer Count')).reset_index(drop=True) #mais vistos por influencer
+
+#top_viewers = df.nlargest(10, 'Viewer Count') # mais vistos
+
 count_inapropriateGame = df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False).sum()
+proportion_inapropriateGame = (count_inapropriateGame/unique_games)*100
+
+
+
 count_mature_games = df_final['Is Mature'].sum() # quantidade de jogos classificados com 18+
 count_mature_channels = df_final['Classification Labels'].notnull().sum() # quantidade de canais classificados com 18+
 inappropriate_top_viewers = top_viewers[top_viewers['Age Rating'].str.contains(patternInapropriate, case=False, na=False)] #mais vistos classificados com 18+
