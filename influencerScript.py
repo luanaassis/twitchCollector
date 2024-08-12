@@ -6,29 +6,29 @@ folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev'
 files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and f.startswith('twitch_data_influencers')]
 
 isAdult = {
-    "felipeneto": 1,
-    "rezendeevil": 1,
+    "felipeneto_oficial": 1,
+    "rezendeevil33": 1,
     "paitambemjoga": 1,
-    "paitambemjogalive": 1,
+    "PaiTambemJogaLive": 1,
     "camilalouresoficial": 1,
-    "enaldinho": 1,
-    "kidplayerr": 0,
-    "loud_thurzin": 0,
-    "jeanmago": 1,
-    "rowdyroganfam": 0,
-    "zenonlives": 0,
-    "evantube": 1,
-    "piperrockelle16": 1,
-    "levcameron": 1,
-    "queenkhamyra": 1,
-    "charlidamelioop": 1,
-    "mongraal": 1,
-    "captainsparklez": 1,
-    "ldshadowlady": 1,
-    "grianmc": 1,
-    "itsfunneh": 1,
-    "chuggaaconroy": 1,
-    "blitz": 1
+    "enaldinho_fan_clube": 1,
+    "KidPlayerr": 0,
+    "loud_thurzin4": 0,
+    "jeanmago1020": 1,
+    "rowdyroganfan12346": 0,
+    "ZenonLives": 0,
+    "evantube_inactive_200228": 1,
+    "piperrockelle3134433": 1,
+    "leocameron1234": 1,
+    "queenkayra": 1,
+    "charlidameliooo": 1,
+    "mongraal_watchparty": 1,
+    "CaptainSparklez": 1,
+    "ldshadowlady10221872011": 1,
+    "grainmcd": 1,
+    "itsfunnehlolhrh": 1,
+    "Chuggaaconroybot": 1,
+    "Blitzcrank": 1
 }
 
 patternInapropriate = r'\b(?:eighteen|18|CERO_Z)\b'
@@ -61,20 +61,30 @@ colunas_desejadas = ['Game Name', 'Viewer Count', 'Age Rating','Channel Name', '
 top_viewers_by_influencer = top_viewers_by_influencer[colunas_desejadas]
 top_viewers_by_influencer['Age Rating Flag'] = top_viewers_by_influencer['Age Rating'].str.contains(patternInapropriate).astype(float)
 
-df_inappropriate_game = df_final[df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False)]
-df_isAdult = pd.DataFrame(list(isAdult.items()), columns=['Channel Name', 'Is Adult'])
-df_filtered = pd.merge(df_inappropriate_game, df_isAdult, on='Channel Name')
-df_adult_channels = df_filtered[df_filtered['Is Adult'] == 1]
-df_kids_channels = df_filtered[df_filtered['Is Adult'] == 0]
-count_eighteen_by_influencer_withIsAdult = df_adult_channels.groupby('Channel Name').size()
+
+isAdult = pd.DataFrame(list(isAdult.items()), columns=['Channel Name', 'Is Adult'])
+isAdultMerged = pd.merge(df_final, isAdult, on='Channel Name')
+isAdultFiltered = isAdultMerged[isAdultMerged['Is Adult'] == 1]
+isKidFiltered = isAdultMerged[isAdultMerged['Is Adult'] == 0]
+
+unique_games_streamedByAdults = isAdultFiltered['Game Name'].nunique()
+unique_games_streamedByKids = isKidFiltered['Game Name'].nunique()
+
+games_innapropriates_streamedByAdults = isAdultFiltered[isAdultFiltered['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
+games_innapropriates_streamedByKids = isKidFiltered[isKidFiltered['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
 
 output_file = f'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\output_influencers_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt'
 
 with open(output_file, 'w', encoding='utf-8') as f:
     f.write('Existe diferença na classificação de jogos exibidos por influenciadores infantis com - de 18 anos com influenciadores infantis que possuem + de 18 anos?\n' )
     f.write('Influenciadores infantis com - de 18 anos:\n')
-
+    for influencer, count in games_innapropriates_streamedByKids.items():
+        proportion = (count / unique_games_streamedByKids) * 100
+        f.write(f"Influencer: {influencer}, Count: {count}, Total:{unique_games_streamedByKids}, Proportion: {proportion:.2f}%\n")
     f.write('Influenciadores infantis com + de 18 anos:\n')
+    for influencer, count in games_innapropriates_streamedByAdults.items():
+        proportion = (count / unique_games_streamedByAdults) * 100
+        f.write(f"Influencer: {influencer}, Count: {count}, Total:{unique_games_streamedByAdults}, Proportion: {proportion:.2f}%\n")
     f.write('Os jogos de influenciadores para o publico infantil sao apropriados para este publico?\n' )
     for influencer, count in count_eighteen_by_influencer.items():
         proportion = (count / unique_games) * 100
