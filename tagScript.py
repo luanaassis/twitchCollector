@@ -21,8 +21,8 @@ df_mid = pd.concat(dataframes, ignore_index=True)
 df_final = df.drop_duplicates(subset=['Channel Id', 'Stream Title', 'Game ID'], keep='last')
 
 #Metrics
-unique_channels = df_final['Channel Id'].nunique()
-unique_games = df_final['Game Name'].nunique()
+unique_channels = df_final.groupby('Source URL')['Channel Id'].nunique()
+unique_games = df_final.groupby('Source URL')['Game Name'].nunique()
 count_mature_channels_by_tag = df_final[df_final['Classification Labels'].notnull()].groupby('Source URL').size()
 count_mature_games_by_tag = df_final.groupby('Source URL')['Is Mature'].sum()
 most_played_games_by_tag = df_final.groupby('Source URL')['Game Name'].value_counts()
