@@ -34,6 +34,20 @@ count_not_mature_channel_by_tag = df_final[df_final['Is Mature'] == 0].groupby('
 count_eighteen_by_tag = df_final[df_final['Age Rating'].str.contains(pattern, case=False, na=False)].groupby('Source URL').size()
 count_not_eighteen_by_tag = df_final[~df_final['Age Rating'].str.contains(pattern, case=False, na=False)].groupby('Source URL').size()
 
+top_viewers_df = (
+    df_final.groupby('Source URL')
+    .apply(lambda x: x.nlargest(10, 'Viewer Count'))
+    .reset_index(drop=True))
+top_viewers_df['Age Ratings Indicator'] = top_viewers_df['Age Rating'].str.contains(pattern).astype(int)
+counts_top_viewers = top_viewers_df.groupby('Source URL')['Age Ratings Indicator'].value_counts().unstack(fill_value=0)
+
+most_played_games_by_tag = df_final.groupby('Source URL')['Game Name'].value_counts()
+most_played_games_by_tag = most_played_games_by_tag.reset_index(name='Count')
+result_most_played_games_by_tag = pd.merge(most_played_games_by_tag, df_final[['Source URL', 'Game Name', 'Age Rating']], on=['Source URL', 'Game Name'], how='left')
+result_most_played_games_by_tag = result_most_played_games_by_tag.drop_duplicates(subset=['Source URL', 'Game Name','Age Rating'])
+result_most_played_games_by_tag['Age Ratings Indicator'] = result_most_played_games_by_tag['Age Rating'].str.contains(pattern).astype(int)
+counts_popular_games = top_viewers_df.groupby('Source URL')['Age Ratings Indicator'].value_counts().unstack(fill_value=0)
+
 #First graph
 comparison_df = pd.DataFrame({
     'Canais com classificação adulta': count_mature_classification_by_tag,
@@ -80,4 +94,20 @@ ax.set_ylabel('Quantidade')
 ax.set_title('Comparação entre Contagem de Jogos Adultos e Jogos Não Adultos por TAG')
 plt.xticks(rotation=45, ha='right')
 plt.tight_layout()
+plt.show()
+
+#Fouth graph
+colors = ['#0000ff','#ff0000']
+counts_top_viewers.plot(kind='bar', stacked=True, color=colors)
+plt.title('Classificação dos jogos exibidos nas streams mais visualizadas por Tag')
+plt.xlabel('Tag')
+plt.ylabel('Quantidade')
+plt.show()
+
+#Fifth graph
+colors = ['#0000ff','#ff0000']
+counts_popular_games.plot(kind='bar', stacked=True, color=colors)
+plt.title('Classificação dos jogos mais exibidos nas streams por Tag')
+plt.xlabel('Tag')
+plt.ylabel('Quantidade')
 plt.show()
