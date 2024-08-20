@@ -95,7 +95,7 @@ colors = ['#ff0000', '#0000ff']
 comparison_df.plot(kind='bar', ax=ax, color=colors)
 ax.set_xlabel('Tag')
 ax.set_ylabel('Quantidade')
-ax.set_title('Comparação entre Contagem de Canais Adultos e Canais Não Adultos por TAG')
+ax.set_title('Comparação entre Contagem de com e sem Conteúdo Promocional por TAG')
 plt.xticks(rotation=45, ha='right')
 plt.tight_layout()
 plt.show()
