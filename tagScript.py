@@ -21,6 +21,26 @@ pd.set_option('display.expand_frame_repr', False)
 df_mid = pd.concat(dataframes, ignore_index=True)
 df_final = df.drop_duplicates(subset=['Channel Id', 'Stream Title', 'Game ID'], keep='last')
 
+df_final['Source URL'] = df['Source URL'].replace(
+    {'https://www.twitch.tv/directory/all/tags/FamilyFriendly': 'FamilyFriendly',
+    'https://www.twitch.tv/directory/all/tags/kids': 'Kids',
+    'https://www.twitch.tv/directory/all/tags/kid': 'Kid',
+    'https://www.twitch.tv/directory/all/tags/kidstreaming': 'KidStreaming',
+    'https://www.twitch.tv/directory/all/tags/KidSafe': 'KidSafe',
+    'https://www.twitch.tv/directory/all/tags/KidFriendly': 'KidFriendly',
+    'https://www.twitch.tv/directory/all/tags/KidGamer': 'KidGamer',
+    'https://www.twitch.tv/directory/all/tags/childrens': 'Childrens',
+    'https://www.twitch.tv/directory/all/tags/KidsGaming': 'KidsGaming',
+    'https://www.twitch.tv/directory/all/tags/childfriendlystream':'ChildFriendlyStream',
+    'https://www.twitch.tv/directory/all/tags/kidsandparentsgamers':'KidsAndParentsGamers',
+    'https://www.twitch.tv/directory/all/tags/kidshow':'KidShow',
+    'https://www.twitch.tv/directory/all/tags/Friendly':'Friendly',
+    'https://www.twitch.tv/directory/all/tags/Family':'Family',
+    'https://www.twitch.tv/directory/all/tags/Kidsfriendly':'KidsFriendly',
+    'https://www.twitch.tv/directory/all/tags/KIDSTREAMER':'KIDSTREAMER',
+    'https://www.twitch.tv/directory/all/tags/kidstream':'kidstream'
+     })
+
 #Metrics
 unique_channels = df_final.groupby('Source URL')['Channel Id'].nunique()
 unique_games = df_final.groupby('Source URL')['Game Name'].nunique()
