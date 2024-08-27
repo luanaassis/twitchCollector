@@ -66,7 +66,20 @@ most_played_games_by_tag = most_played_games_by_tag.reset_index(name='Count')
 result_most_played_games_by_tag = pd.merge(most_played_games_by_tag, df_final[['Source URL', 'Game Name', 'Age Rating']], on=['Source URL', 'Game Name'], how='left')
 result_most_played_games_by_tag = result_most_played_games_by_tag.drop_duplicates(subset=['Source URL', 'Game Name','Age Rating'])
 result_most_played_games_by_tag['Age Ratings Indicator'] = result_most_played_games_by_tag['Age Rating'].str.contains(pattern).astype(int)
-counts_popular_games = top_viewers_df.groupby('Source URL')['Age Ratings Indicator'].value_counts().unstack(fill_value=0)
+counts_popular_games = top_viewers_df.groupby('Source URL')['Age Ratings Indicator'].value_counts()
+
+top_10_most_played_games_by_tag = result_most_played_games_by_tag.groupby('Source URL').apply(lambda x: x.nlargest(10, 'Count'))
+top_10_most_played_games_by_tag = top_10_most_played_games_by_tag.reset_index(drop=True)
+
+mature_channel = df_final[df_final['Is Mature'] == 1]
+mature_channel_tag = mature_channel[['Stream Tags', 'Source URL']]
+
+games_eighteen_by_tag = df_final[df_final['Age Rating'].str.contains(pattern, case=False, na=False)][['Source URL', 'Game Name', 'IGDB ID']].drop_duplicates()
+
+#print(games_eighteen_by_tag) #Diferentes jogos +18
+#print(top_viewers_df) #Resultados de Q4 para justificar
+#print(top_10_most_played_games_by_tag) #Resultados de Q3 para justificar
+#print(mature_channel_tag) #Analisar tags com conteúdo promocional
 
 #First graph
 comparison_df = pd.DataFrame({
