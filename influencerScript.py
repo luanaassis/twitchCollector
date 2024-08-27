@@ -52,26 +52,30 @@ unique_channels = df_final['Channel Id'].nunique()
 unique_games = df_final['Game Name'].nunique()
 unique_videos_lives = df_final['Stream/Video Title'].nunique()
 
-count_eighteen_by_influencer = df_final[df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
+tags_used_by_influencers = df_final.groupby('Channel Name')['Stream Tags'].apply(lambda x: ', '.join(x.dropna().unique())).reset_index()
+
+count_eighteengames_by_influencer = df_final[df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
+count_NOT_eighteengames_by_influencer = df_final[~df_final['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
+
 count_mature_channels_by_influencer = df_final[df_final['Classification Labels'].notnull()].groupby('Channel Name').size()
+
 count_mature_games_defined_by_influencer = df_final.groupby('Channel Name')['Is Mature'].sum()
-filtered_results_count_mature_games_defined_by_influencer = count_mature_games_defined_by_influencer[count_mature_games_defined_by_influencer != 0]
+
 top_viewers_by_influencer = df_final.groupby('Channel Name').apply(lambda x: x.nlargest(20, 'Viewer Count')).reset_index(drop=True)
 colunas_desejadas = ['Game Name', 'Viewer Count', 'Age Rating','Channel Name', 'Stream/Video Title']
 top_viewers_by_influencer = top_viewers_by_influencer[colunas_desejadas]
 top_viewers_by_influencer['Age Rating Flag'] = top_viewers_by_influencer['Age Rating'].str.contains(patternInapropriate).astype(float)
-
+counts_top_viewers_by_influencer = top_viewers_by_influencer.groupby('Channel Name')['Age Rating Flag'].value_counts().unstack(fill_value=0)
 
 isAdult = pd.DataFrame(list(isAdult.items()), columns=['Channel Name', 'Is Adult'])
 isAdultMerged = pd.merge(df_final, isAdult, on='Channel Name')
 isAdultFiltered = isAdultMerged[isAdultMerged['Is Adult'] == 1]
 isKidFiltered = isAdultMerged[isAdultMerged['Is Adult'] == 0]
 
-unique_games_streamedByAdults = isAdultFiltered['Game Name'].nunique()
-unique_games_streamedByKids = isKidFiltered['Game Name'].nunique()
-
 games_innapropriates_streamedByAdults = isAdultFiltered[isAdultFiltered['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
 games_innapropriates_streamedByKids = isKidFiltered[isKidFiltered['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
+
+#print(tags_used_by_influencers) #Tags utilizadas pelos influencers
 
 output_file = f'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\output_influencers_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.txt'
 
