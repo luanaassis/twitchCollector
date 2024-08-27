@@ -42,7 +42,7 @@ df_final['Source URL'] = df['Source URL'].replace(
      })
 
 #Metrics
-unique_channels = df_final.groupby('Source URL')['Channel Id'].nunique()
+name_unique_channels = df_final['Channel Name'].unique()
 unique_games = df_final.groupby('Source URL')['Game Name'].nunique()
 
 count_mature_classification_by_tag = df_final[df_final['Classification Labels'].notnull()].groupby('Source URL').size()
@@ -76,6 +76,7 @@ mature_channel_tag = mature_channel[['Stream Tags', 'Source URL']]
 
 games_eighteen_by_tag = df_final[df_final['Age Rating'].str.contains(pattern, case=False, na=False)][['Source URL', 'Game Name', 'IGDB ID']].drop_duplicates()
 
+#print(name_unique_channels) #Nome dos canais buscados
 #print(games_eighteen_by_tag) #Diferentes jogos +18
 #print(top_viewers_df) #Resultados de Q4 para justificar
 #print(top_10_most_played_games_by_tag) #Resultados de Q3 para justificar
