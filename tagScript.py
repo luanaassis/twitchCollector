@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import datetime
+import seaborn as sns
 import matplotlib.pyplot as plt
 
 folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev'
@@ -19,13 +20,13 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.max_colwidth', None)
 pd.set_option('display.expand_frame_repr', False)
 df_mid = pd.concat(dataframes, ignore_index=True)
-df_final = df.drop_duplicates(subset=['Channel Id', 'Stream Title', 'Game ID'], keep='last')
+df_final = df_mid.drop_duplicates(subset=['Channel Id', 'Stream Title', 'Game ID'], keep='last')
 
-df_final['Source URL'] = df['Source URL'].replace(
+df_final['Source URL'] = df_final['Source URL'].replace(
     {'https://www.twitch.tv/directory/all/tags/FamilyFriendly': 'FamilyFriendly',
     'https://www.twitch.tv/directory/all/tags/kids': 'Kids',
     'https://www.twitch.tv/directory/all/tags/kid': 'Kid',
-    'https://www.twitch.tv/directory/all/tags/kidstreaming': 'KidStreaming',
+    'https://www.twitch.tv/directory/all/tags/Kidstreaming': 'KidStreaming',
     'https://www.twitch.tv/directory/all/tags/KidSafe': 'KidSafe',
     'https://www.twitch.tv/directory/all/tags/KidFriendly': 'KidFriendly',
     'https://www.twitch.tv/directory/all/tags/KidGamer': 'KidGamer',
@@ -41,7 +42,17 @@ df_final['Source URL'] = df['Source URL'].replace(
     'https://www.twitch.tv/directory/all/tags/kidstream':'kidstream'
      })
 
+df_final['SearchTime'] = pd.to_datetime(df_final['SearchTime'])
+df_final['Hour'] = df_final['SearchTime'].dt.hour
+df_final['DayType'] = df_final['SearchTime'].dt.weekday.apply(lambda x: 'Weekend' if x >= 5 else 'Weekday')
+
 #Metrics
+grouped_by_hour = df_final[['Hour', 'Source URL']]
+grouped_by_hour = grouped_by_hour.groupby(['Hour', 'Source URL']).size().reset_index(name='Quantity')
+
+grouped_by_day = df_final[['DayType', 'Source URL']]
+grouped_by_day = grouped_by_day.groupby(['DayType', 'Source URL']).size().reset_index(name='Quantity')
+
 name_unique_channels = df_final['Channel Name'].unique()
 unique_games = df_final.groupby('Source URL')['Game Name'].nunique()
 
@@ -75,12 +86,13 @@ mature_channel = df_final[df_final['Is Mature'] == 1]
 mature_channel_tag = mature_channel[['Stream Tags', 'Source URL']]
 
 games_eighteen_by_tag = df_final[df_final['Age Rating'].str.contains(pattern, case=False, na=False)][['Source URL', 'Game Name', 'IGDB ID']].drop_duplicates()
+average_audience = df_final.groupby('Source URL')['Viewer Count'].mean().reset_index()
 
-#print(name_unique_channels) #Nome dos canais buscados
-#print(games_eighteen_by_tag) #Diferentes jogos +18
-#print(top_viewers_df) #Resultados de Q4 para justificar
-#print(top_10_most_played_games_by_tag) #Resultados de Q3 para justificar
-#print(mature_channel_tag) #Analisar tags com conteúdo promocional
+print(name_unique_channels) #Nome dos canais buscados
+print(games_eighteen_by_tag) #Diferentes jogos +18
+print(top_viewers_df) #Resultados de Q4 para justificar
+print(top_10_most_played_games_by_tag) #Resultados de Q3 para justificar
+print(mature_channel_tag) #Analisar tags com conteúdo promocional
 
 #First graph
 comparison_df = pd.DataFrame({
@@ -100,8 +112,8 @@ plt.show()
 
 #Second graph
 comparison_df = pd.DataFrame({
-    'Canais adultos': count_mature_channel_by_tag,
-    'Canais não adultos': count_not_mature_channel_by_tag
+    'Canais com conteúdo promocional': count_mature_channel_by_tag,
+    'Canais sem conteúdo promocional': count_not_mature_channel_by_tag
 })
 comparison_df = comparison_df.fillna(0)
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -144,4 +156,36 @@ counts_popular_games.plot(kind='bar', stacked=True, color=colors)
 plt.title('Classificação dos jogos mais exibidos nas streams por Tag')
 plt.xlabel('Tag')
 plt.ylabel('Quantidade')
+plt.show()
+
+#Por hora
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=grouped_by_hour, x='Hour', y='Quantity', hue='Source URL', marker='o')
+
+plt.title('Quantidade de Streams por Hora e por Tag')
+plt.xlabel('Hora do Dia')
+plt.ylabel('Quantidade de Streams')
+plt.legend(title='Tag')
+plt.grid(True)
+plt.show()
+
+#Por dia 
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=grouped_by_day, x='DayType', y='Quantity', hue='Source URL', marker='o')
+
+plt.title('Quantidade de Streams por Dia e por Tag')
+plt.xlabel('Dia')
+plt.ylabel('Quantidade de Streams')
+plt.legend(title='Tag')
+plt.grid(True)
+plt.show()
+
+#Média de audiência
+plt.figure(figsize=(10, 6))
+sns.barplot(data=average_audience, x='Source URL', y='Viewer Count')
+
+plt.title('Média de Audiência por Tag')
+plt.xlabel('Tag')
+plt.ylabel('Média de Quantidade')
+plt.grid(axis='y')
 plt.show()
