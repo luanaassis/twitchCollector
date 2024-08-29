@@ -76,7 +76,7 @@ isKidFiltered = isAdultMerged[isAdultMerged['Is Adult'] == 0]
 games_innapropriates_streamedByAdults = isAdultFiltered[isAdultFiltered['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
 games_innapropriates_streamedByKids = isKidFiltered[isKidFiltered['Age Rating'].str.contains(patternInapropriate, case=False, na=False)].groupby('Channel Name').size()
 
-#print(tags_used_by_influencers) #Tags utilizadas pelos influencers
+print(tags_used_by_influencers) #Tags utilizadas pelos influencers
 
 #First graph
 consolidated_counts = pd.DataFrame({
@@ -84,10 +84,10 @@ consolidated_counts = pd.DataFrame({
     'Non-18+ Games': count_NOT_eighteengames_by_influencer
 }).fillna(0)
 num_channels = len(consolidated_counts)
-fig, axes = plt.subplots(num_channels, 1, figsize=(8, 4 * num_channels))
+fig, axes = plt.subplots(num_channels, 1, figsize=(4, num_channels))
 for (channel, counts), ax in zip(consolidated_counts.iterrows(), axes):
     ax.pie(counts, labels=counts.index, autopct='%1.1f%%', startangle=140, colors=['red', 'green'])
-    ax.set_title(f'Distribuição de Jogos por Classificação Etária para {channel}')
+    ax.set_title(f'Distribuição por Classificação Etária de Jogos para {channel}')
 
 plt.tight_layout()
 plt.show()
@@ -99,9 +99,9 @@ plt.ylabel('Número de Canais com Classificação Etária')
 plt.show()
 #Third graph
 count_mature_games_defined_by_influencer.plot(kind='bar', color='red')
-plt.title('Canais com Classificação Adulta por Influenciador')
+plt.title('Canais com Conteúdo Promocional por Influenciador')
 plt.xlabel('Canal')
-plt.ylabel('Canais com Classificação Adulta')
+plt.ylabel('Canais com Conteúdo Promocional')
 plt.show()
 #Fourth graph
 num_channels = len(counts_top_viewers_by_influencer)
