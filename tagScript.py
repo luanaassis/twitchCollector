@@ -1,10 +1,10 @@
 import pandas as pd
 import os
-import datetime
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
 
-folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev'
+folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\apresentacao'
 files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and f.startswith('twitch_data_tags')]
 
 dataframes = []
@@ -45,15 +45,23 @@ df_final['Source URL'] = df_final['Source URL'].replace(
 df_final['SearchTime'] = pd.to_datetime(df_final['SearchTime'])
 df_final['Hour'] = df_final['SearchTime'].dt.hour
 df_final['DayType'] = df_final['SearchTime'].dt.weekday.apply(lambda x: 'Weekend' if x >= 5 else 'Weekday')
+df_final['DayWeek'] = df_final['SearchTime'].dt.day_name()
 
 #Metrics
+tags_from_family_friendly = df_final.loc[df_final['Source URL'] == 'FamilyFriendly', 'Stream Tags']
+todas_as_tags = tags_from_family_friendly.str.split(', ').explode()
+frequencia_tags = todas_as_tags.value_counts()
+
 grouped_by_hour = df_final[['Hour', 'Source URL']]
 grouped_by_hour = grouped_by_hour.groupby(['Hour', 'Source URL']).size().reset_index(name='Quantity')
 
 grouped_by_day = df_final[['DayType', 'Source URL']]
 grouped_by_day = grouped_by_day.groupby(['DayType', 'Source URL']).size().reset_index(name='Quantity')
 
-name_unique_channels = df_final['Channel Name'].unique()
+grouped_by_day_of_week = df_final[['DayWeek', 'Source URL']]
+grouped_by_day_of_week = grouped_by_day_of_week.groupby(['DayWeek', 'Source URL']).size().reset_index(name='Quantity')
+
+name_unique_channels = df_final.groupby('Source URL')['Channel Name'].unique()
 unique_games = df_final.groupby('Source URL')['Game Name'].nunique()
 
 count_mature_classification_by_tag = df_final[df_final['Classification Labels'].notnull()].groupby('Source URL').size()
@@ -88,11 +96,21 @@ mature_channel_tag = mature_channel[['Stream Tags', 'Source URL']]
 games_eighteen_by_tag = df_final[df_final['Age Rating'].str.contains(pattern, case=False, na=False)][['Source URL', 'Game Name', 'IGDB ID']].drop_duplicates()
 average_audience = df_final.groupby('Source URL')['Viewer Count'].mean().reset_index()
 
-print(name_unique_channels) #Nome dos canais buscados
-print(games_eighteen_by_tag) #Diferentes jogos +18
-print(top_viewers_df) #Resultados de Q4 para justificar
-print(top_10_most_played_games_by_tag) #Resultados de Q3 para justificar
-print(mature_channel_tag) #Analisar tags com conteúdo promocional
+#print(name_unique_channels) #Nome dos canais buscados
+#print(games_eighteen_by_tag) #Diferentes jogos +18
+#print(top_viewers_df) #Resultados de Q4 para justificar
+#print(top_10_most_played_games_by_tag) #Resultados de Q3 para justificar
+#print(mature_channel_tag) #Analisar tags com conteúdo promocional
+
+with open('uniqueChannels.txt', 'w', encoding='utf-8') as arquivo:
+    for channel in name_unique_channels:
+        arquivo.write(f'{channel}\n')
+
+games_eighteen_by_tag.to_excel('games18.xlsx')
+mature_channel_tag.to_excel('promocionalTags.xlsx')
+top_10_most_played_games_by_tag.to_excel('mostPlayed.xlsx')
+top_viewers_df.to_excel('topviewer.xlsx')
+frequencia_tags.to_excel('frequencia_tags_family_friendly.xlsx')
 
 #First graph
 comparison_df = pd.DataFrame({
@@ -167,13 +185,28 @@ plt.xlabel('Hora do Dia')
 plt.ylabel('Quantidade de Streams')
 plt.legend(title='Tag')
 plt.grid(True)
+
+# Adiciona todas as horas no eixo X
+plt.xticks(np.arange(0, 24, 1))
+
 plt.show()
 
 #Por dia 
 plt.figure(figsize=(12, 6))
 sns.lineplot(data=grouped_by_day, x='DayType', y='Quantity', hue='Source URL', marker='o')
 
-plt.title('Quantidade de Streams por Dia e por Tag')
+plt.title('Quantidade de Streams por Tipo de Dia e por Tag')
+plt.xlabel('Dia')
+plt.ylabel('Quantidade de Streams')
+plt.legend(title='Tag')
+plt.grid(True)
+plt.show()
+
+#Por dia da semana
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=grouped_by_day_of_week, x='DayWeek', y='Quantity', hue='Source URL', marker='o')
+
+plt.title('Quantidade de Streams por Dia da semana e por Tag')
 plt.xlabel('Dia')
 plt.ylabel('Quantidade de Streams')
 plt.legend(title='Tag')
