@@ -656,15 +656,16 @@ def verifyStreamersFromGames():
     filename = f"twitch_data_streamers_game_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx"
     wb.save(filename)
 def main():
-    #while True:
-        #getKidsInfluencersInfo()
-        #getKidsTagsInfo()
-        #getStreamsByGame()
-        #verifyStreamersFromGames()
-        #print(ageManipulation(1905))
-        #print(getAgeRatingContentDescription(31085))
-        print(processAgeRatingDescriptions(1905))
-        #time.sleep(3600)
-
+    arquivo_excel = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\games18.xlsx'
+    df = pd.read_excel(arquivo_excel)
+    df = df.dropna(subset=['IGDB ID'])
+    df['IGDB ID'] = df['IGDB ID'].astype(int)
+    df['Age Rating Description'] = df['IGDB ID'].apply(processAgeRatingDescriptions)
+    igdb_id = df['IGDB ID']
+    #for id in igdb_id:
+        #correctid = int(id)
+        #print(processAgeRatingDescriptions(correctid))
+    df.head()
+    df.to_excel('games18PQ.xlsx')
 if __name__ == "__main__":
     main()
