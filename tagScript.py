@@ -3,6 +3,7 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 
 folder = 'C:\\Users\\luana\\Desktop\\twitchCollector-dev\\apresentacao\\tags'
 files = [f for f in os.listdir(folder) if f.endswith('.xlsx') and f.startswith('twitch_data_tags')]
@@ -67,9 +68,19 @@ frequencia_tags = todas_as_tags.value_counts()
 north_american_pattern = df_final[
     df_final['Classification Labels'].str.contains('MatureGame') &
     df_final['Age Rating'].str.contains(r"\('ESRB', 'M'\)")
+]
+
+count_north_american_pattern = df_final[
+    df_final['Classification Labels'].str.contains('MatureGame') &
+    df_final['Age Rating'].str.contains(r"\('ESRB', 'M'\)")
 ].shape[0]  # Contar as ocorrências
 
 euro_pattern = df_final[
+    df_final['Classification Labels'].str.contains('MatureGame') &
+    df_final['Age Rating'].str.contains(r"\('PEGI', 'Eighteen'\)")
+]
+
+count_euro_pattern = df_final[
     df_final['Classification Labels'].str.contains('MatureGame') &
     df_final['Age Rating'].str.contains(r"\('PEGI', 'Eighteen'\)")
 ].shape[0]  # Contar as ocorrências
@@ -77,13 +88,33 @@ euro_pattern = df_final[
 BR_pattern = df_final[
     df_final['Classification Labels'].str.contains('MatureGame') &
     df_final['Age Rating'].str.contains('CLASS_IND_Eighteen')
+]
+
+count_BR_pattern = df_final[
+    df_final['Classification Labels'].str.contains('MatureGame') &
+    df_final['Age Rating'].str.contains('CLASS_IND_Eighteen')
 ].shape[0]  # Contar as ocorrências
 
-total_pattern = df_final['Classification Labels'].str.contains('MatureGame', na=False).sum()
+count_only_BR_pattern = df_final[
+    df_final['Age Rating'].str.contains('CLASS_IND_Eighteen') &
+    ~df_final['Classification Labels'].fillna('').str.contains('MatureGame')
+].shape[0]  # Contar as ocorrências
+
+df_diff_patterns_BR = df_final[df_final['Age Rating'].str.contains('CLASS_IND_Eighteen') & ~df_final['Classification Labels'].fillna('').str.contains('MatureGame')]
+df_diff_patterns_BR.to_excel('pattern_BR_DIFF.xlsx')
+
+df_diff_patterns_euro = df_final[df_final['Age Rating'].str.contains(r"\('PEGI', 'Eighteen'\)") & ~df_final['Classification Labels'].fillna('').str.contains('MatureGame')]
+df_diff_patterns_euro.to_excel('pattern_EURO_DIFF.xlsx')
+
+df_diff_patterns_usa = df_final[df_final['Age Rating'].str.contains(r"\('ESRB', 'M'\)") & ~df_final['Classification Labels'].fillna('').str.contains('MatureGame')]
+df_diff_patterns_usa.to_excel('pattern_USA_DIFF.xlsx')
+
+total_pattern = df_final[df_final['Classification Labels'].str.contains('MatureGame', na=False)]
+count_total_pattern = df_final['Classification Labels'].str.contains('MatureGame', na=False).sum()
 
 data_patternn = {
     'Region': ['North America', 'Europe', 'Brazil', 'Total'],
-    'Pattern Count': [north_american_pattern, euro_pattern, BR_pattern, total_pattern]
+    'Pattern Count': [count_north_american_pattern, count_euro_pattern, count_BR_pattern, count_total_pattern]
 }
 df_patterns = pd.DataFrame(data_patternn)
 df_patterns.to_excel('patterns_summary.xlsx', index=False)
@@ -94,6 +125,9 @@ mature_channel = df_final[df_final['Is Mature'] == 1]
 mature_channel_tag = mature_channel[['Stream Tags', 'Source URL']]
 todas_as_tags_promocionais = mature_channel_tag['Stream Tags'].str.split(', ').explode()
 frequencia_tags_promocionais = todas_as_tags_promocionais.value_counts().reset_index(name='Quantity')
+
+mature_channel_analisys = mature_channel[mature_channel['Stream Tags'].str.contains('ADHD') | mature_channel['Stream Tags'].str.contains('Chill')]
+mature_channel_analisys.to_excel('mature_analisys.xlsx')
 
 grouped_by_hour = df_final[['Hour', 'Source URL']]
 grouped_by_hour = grouped_by_hour.groupby(['Hour', 'Source URL']).size().reset_index(name='Quantity')
@@ -182,6 +216,76 @@ tags_in_same_stream.to_excel('tags_same_stream.xlsx')
 title_in_same_stream.to_excel('title_with_tag.xlsx')
 df_final.to_excel("final.xlsx")
 result_most_played_games_by_tag.to_excel('most_played_games.xlsx')
+
+df_age_description = pd.read_excel('games18PQ.xlsx')
+
+def extract_descriptions(details_str):
+    # Usa expressão regular para extrair todas as descrições
+    descriptions = re.findall(r"'description': '([^']*)'", details_str)
+    # Retorna as descrições encontradas
+    return descriptions
+
+# Aplica a função à coluna 'details' e cria uma nova coluna 'descriptions'
+df_age_description['descriptions'] = df_age_description['Age Rating Description'].apply(extract_descriptions)
+df_age_description = df_age_description.drop(['Unnamed: 0.1', 'Unnamed: 0','Game Name','IGDB ID','Age Rating Description'], axis=1)
+df_age_description = df_age_description.explode('descriptions')
+df_age_description['descriptions'] = df_age_description['descriptions'].replace({
+    'Conteúdo Sexual (Sexual Content)': 'Sexual Content',
+    'Drogas (Drugs)' : 'Drugs',
+    'Drogas Ilícitas (Illegal Drugs)' : 'Illegal Drugs',
+    'Drogas Lícitas (Legal Drugs)' : 'Legal Drugs',
+    'Linguagem Imprópria (Inappropriate Language)' : 'Inappropriate Language',
+    'Nudez (Nudity)' : 'Nudity',
+    'Violência (Violence)' : 'Violence',
+    'Violência Extrema (Extreme Violence)' : 'Extreme Violence'})
+df_age_description = df_age_description.reset_index()
+df_age_description = df_age_description.drop_duplicates()
+df_age_description = df_age_description.groupby('Source URL')['descriptions'].value_counts().unstack(fill_value=0)
+df_age_description.to_excel('age_description.xlsx')
+
+df_age = pd.read_excel('age_description.xlsx')
+
+def make_radar_chart(df, categories):
+    # Número de variáveis
+    num_vars = len(categories)
+
+    # Calcula o ângulo de cada eixo em um gráfico de radar
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+
+    # Adiciona o ângulo do ponto de início para completar o círculo
+    angles += angles[:1]
+
+    # Cria o gráfico
+    fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(polar=True))
+
+    # Repetir para cada linha (cada "Source URL")
+    for i, row in df.iterrows():
+        values = row[1:].values.flatten().tolist()  # Pega todos os valores exceto o primeiro
+        values += values[:1]  # Completa o ciclo para o gráfico de radar
+
+        # Verifica se os valores são numéricos
+        values = [float(v) for v in values]  # Converte para float, se necessário
+
+        # Desenha a linha de cada 'Source URL'
+        ax.plot(angles, values, linewidth=1, linestyle='solid', label=str(row['Source URL']))
+        ax.fill(angles, values, alpha=0.1)  # Preenche a área
+
+    # Adiciona as labels nas categorias
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(categories)
+
+    # Exibe a legenda
+    plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+
+    plt.title("Gráfico de Radar - Descritores por Source URL")
+    plt.show()
+
+# Defina as categorias que correspondem às colunas da tabela, exceto 'Source URL'
+categories = list(df_age.columns[1:])
+print(list(df_age.columns[0]))
+
+# Chame a função para desenhar o gráfico de radar
+make_radar_chart(df_age, categories)
 
 plt.figure(figsize=(12, 6))
 sns.lineplot(data=grouped_by_top_languages, x='Hour', y='Quantity', hue='Language', marker='o')
