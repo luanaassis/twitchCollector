@@ -19,7 +19,6 @@ from openpyxl import Workbook
 client_id = ''
 client_secret = ''
 
-
 rating_systems = {1: 'ESRB', 2: 'PEGI', 3: 'CERO', 4: 'USK', 5: 'GRAC', 6: 'CLASS_IND', 7: 'ACB'}
 rating_codes = {
     1: "Three",
@@ -262,13 +261,13 @@ def getUser(id, login):
 
 @retry_on_exception()
 def searchKidsTags():
-    chrome_driver_path = r'C:\Users\luana\Desktop\chromedriver-win64\chromedriver.exe'
-
-    service = Service(chrome_driver_path)
-    service.start()
+    #chrome_driver_path = r'home/locus/Desktop/chromedriver-linux64/chromedriver'
+    #service = Service(chrome_driver_path)
+    #service.start()
     options = webdriver.ChromeOptions()
     options.add_argument('--headless')
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(executable_path='/home/locus/Desktop/chromedriver-linux64/chromedriver', options=options)
+    #driver = webdriver.Chrome(service=service, options=options)
 
     urls = [
         'https://www.twitch.tv/directory/all/tags/kids',
@@ -565,7 +564,7 @@ def main():
     while True:
         getKidsInfluencersInfo()
         getKidsTagsInfo()
-        getStreamsByGame()
+        #getStreamsByGame()
         #verifyStreamersFromGames()
         time.sleep(3600)
 
